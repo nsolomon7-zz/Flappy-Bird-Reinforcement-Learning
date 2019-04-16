@@ -1,4 +1,5 @@
 import math, random, copy
+from scipy.stats import logistic
 
 num_per_gen = 20
 elitism = 0.2
@@ -25,12 +26,15 @@ class Neat_O_Player(object):
         self.generations = Generations()
 
     def increment_gen(self):
-        self.cur_gen+=1
+        self.cur_gen = self.cur_gen + 1
         self.cur_bird = None
         networks = []
-        if len(self.generations.generations) == 0:
+        print(self.cur_gen)
+        if self.cur_gen == 1:
+            print("make first gen")
             networks = self.generations.first_generation()
         else:
+            print("make new gen")
             networks = self.generations.next_generation()
 
         nns = []
@@ -41,7 +45,7 @@ class Neat_O_Player(object):
 
         if not historic == -1:
             if len(self.generations.generations) > historic + 1:
-                self.generations.generations = self.generations.generations[0:len(self.generations.generations) - (historic+1)]
+                self.generations.generations = self.generations.generations[len(self.generations.generations) - (historic+1):]
 
         return nns
 
@@ -244,11 +248,7 @@ class Generations(object):
 
 
 def activation(a):
-    ap = (-a) / 1
-    try:
-        return (1 / (1 + math.exp(ap)))
-    except:
-        return 1000
+    return logistic.cdf(a)
 
 
 

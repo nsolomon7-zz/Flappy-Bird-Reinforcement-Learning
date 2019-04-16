@@ -109,7 +109,6 @@ class Controller(object):
         print("resetting")
         self.birds = []
         self.pipes = []
-        self.computer_player = Neat_O_Player()
         for i in range(self.computer_player.num_per_gen):
             self.birds.append(Bird())
         self.networks = self.computer_player.increment_gen()
@@ -127,7 +126,7 @@ class Controller(object):
                 next_pipe = p
                 break
         if next_pipe:
-            stimuli = [next_pipe.top_left[0] - bird.top_left[0],  next_pipe.top_left[1] - bird.top_left[1]]
+            stimuli = [next_pipe.top_left[0] - bird.top_left[0],  next_pipe.center - bird.top_left[1]]
         return stimuli
 
     def increment_frame_score(self):

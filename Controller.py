@@ -122,7 +122,7 @@ class Controller(object):
                 return True
         for p in self.pipes:
             if p.top_left[0] < size[0]:
-                if p.check_for_collision(self.bird):
+                if p.check_for_collision(self.bird,pixel_collision=False):
                     print('Collision Detected!')
                     return True
         return False

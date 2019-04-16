@@ -10,7 +10,12 @@ class Supervised_Player(object):
     def __init__(self, data_file):
         self.scaler = preprocessing.StandardScaler()
         self.clf = self.train_classifier(data_file)
+        self.num_per_gen = 5
+        self.max_gen = 5
+        self.cur_gen = 0
 
+    def increment_gen(self):
+        self.cur_gen+=1
     def make_decision(self, stimuli):
         scaled_input = self.scaler.transform(stimuli)
         decision = self.clf.predict(scaled_input)[0]

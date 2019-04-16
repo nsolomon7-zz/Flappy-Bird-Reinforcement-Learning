@@ -2,10 +2,9 @@ import pygame, random, csv, os
 from Bird import Bird
 from Floor import Floor
 from Pipe import Pipe
-from Supervised_Player import Supervised_Player
+from Neat_O_Player import Neat_O_Player
 size = [512, 768]
 bg_color = (22, 150, 200)
-record_data = False
 computer_playing = False
 play_with_pipes = True
 class Controller(object):
@@ -14,9 +13,16 @@ class Controller(object):
         pygame.init()
         self.screen = pygame.display.set_mode(size)
         self.score_text = pygame.font.SysFont('Comic Sans', 32)
+        self.birds = []
         if computer_playing:
-            self.computer_player = Supervised_Player('./player_data.csv')
-        self.bird = Bird()
+            self.computer_player = Neat_O_Player()
+            for i in range(self.computer_player.num_per_gen):
+                self.birds.append(self.computer_player.get_next_bird())
+            self.computer_player.cur_gen = 0
+            self.scores = [0]*self.computer_player.num_per_gen
+        else:
+            self.birds = [Bird()]
+        self.frame_score = 0
         self.floor = Floor(size[1])
         self.pipes = []
         self.lay_pipe()
@@ -25,32 +31,55 @@ class Controller(object):
 
     def play_game(self):
 
-        collision = False
+        collisions = [False]*len(self.birds)
         time_since_pipe = 1
         score = 0
 
-        if not computer_playing and record_data:
+        if not computer_playing:
             try:
                 #os.remove("./player_data.csv")
                 pass
             except:
                 pass
             self.data_to_write = []
-
         while(self.playing_game):
             if not computer_playing:
-                if not record_data:
-                    self.read_keyboard_input()
-                else:
-                    self.record_data_to_csv()
+                self.read_keyboard_input(self.birds[0])
             else:
-                self.read_computer_input()
-            if not collision:
-                self.bird.move()
+                for b in self.birds:
+                    self.read_computer_input(b)
+
+            # NO COLLISIONS DETECTED
+            if not any(collisions):
+                for b in self.birds:
+                    b.move()
                 self.draw_everything(score)
+            #COLLISIONS DETECTED
             else:
-                self.playing_game = False
-            collision = self.check_for_collision()
+                if not computer_playing:
+                    self.playing_game = False
+                else:
+                    col_count = 0
+                    #CHECK ASLL COLLISIONS
+                    for i in range(len(collisions)-1, -1, -1):
+                        if collisions[i]:
+                            del self.birds[i]
+                            del collisions[i]
+                            self.scores[i] = self.frame_score
+                    #IF NO BIRDS LEFT, RESET GAME AND CONTINUE
+                    if len(self.birds) == 0:
+                        self.computer_player.increment_gen()
+                        if self.computer_player.cur_gen < self.computer_player.max_gen:
+                            self.reset_for_new_gen()
+                            collisions = [False] * len(self.birds)
+                            time_since_pipe = 1
+                            score = 0
+                            continue
+                        self.playing_game = False
+            col_count = 0
+            for b in self.birds:
+                collisions[col_count] = self.check_for_collision(b)
+                col_count += 1
             if play_with_pipes:
                 self.update_pipes()
             if time_since_pipe % 62 == 0 and play_with_pipes:
@@ -60,69 +89,75 @@ class Controller(object):
             pygame.event.pump()
             pygame.time.Clock().tick(30)
             time_since_pipe += 1
-            score = self.increment_score(score)
+            score = self.increment_score(score, self.birds[0])
+            self.increment_frame_score()
 
-        if record_data:
-            self.record_data_to_csv()
         self.display_score()
         self.quit_game()
 
-    def get_stimuli(self):
-        #bird's y position, bird's y velocity, next pipe's center, next pipe's distance
-        stimuli = [self.bird.top_left[1], self.bird.y_velocity, 300, size[0]]
+    def reset_for_new_gen(self):
+        self.birds = []
+        self.computer_player = Supervised_Player('./player_data.csv')
+        for i in range(self.computer_player.num_per_gen):
+            self.birds.append(self.computer_player.get_next_bird())
+        self.computer_player.cur_gen = 0
+        self.scores = [0] * self.computer_player.num_per_gen
+        self.frame_score = 0
+
+    def get_stimuli(self, bird):
+        #x distance to next pipe, y distance to center of pipe
+        stimuli = [999, 999]
+        next_pipe = None
         for p in self.pipes:
-            if p.top_left[0] >= self.bird.top_left[0] - p.pipe_width:
-                stimuli[2] = p.center
-                stimuli[3] = p.top_left[0]
+            if p.top_left[0] >= bird.top_left[0]:
+                next_pipe = p
+                break
+        if next_pipe:
+            stimuli = [bird.top_left[0] - next_pipe.top_left[0], bird.top_left[1] - next_pipe.top_left[1]]
+        print(stimuli)
         return stimuli
 
-    def record_data_to_csv(self):
-        if self.playing_game:
-            self.data_to_write.append([self.read_keyboard_input()] + self.get_stimuli())
-        else:
-            with open('player_data.csv', mode='a', newline='') as csv_file:
-                d_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                for d in self.data_to_write:
-                    d_writer.writerow(d)
+    def increment_frame_score(self):
+        self.frame_score += 1
 
-
-    def increment_score(self, score):
+    def increment_score(self, score, bird):
         for p in self.pipes:
-            if p.top_left[0] < self.bird.top_left[0] - p.pipe_width and not p.scored:
+            if p.top_left[0] < bird.top_left[0] - p.pipe_width and not p.scored:
                 p.scored = True
                 score += 1
         return score
+
     def display_score(self):
         pass
     	
     def quit_game(self):
         pygame.quit()
 
-    def read_keyboard_input(self):
+    def read_keyboard_input(self, bird):
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    self.bird.flap()
+                    bird.flap()
                     return "SPACE"
                 elif event.key == pygame.K_ESCAPE:
                     self.playing_game = False
         return "NO_INPUT"
 
-    def read_computer_input(self):
-        s = [self.get_stimuli()]
+    def read_computer_input(self, bird):
+        s = [self.get_stimuli(bird)]
         action = self.computer_player.make_decision(s)
         print(action)
         if action == "SPACE":
-            self.bird.flap()
+            bird.flap()
 
-    def check_for_collision(self):
-        if pygame.sprite.collide_rect(self.bird, self.floor):
-            if pygame.sprite.collide_mask(self.bird, self.floor):
+    def check_for_collision(self, bird):
+        if pygame.sprite.collide_rect(bird, self.floor):
+            if pygame.sprite.collide_mask(bird, self.floor):
                 print('Collision Detected!')
                 return True
         for p in self.pipes:
             if p.top_left[0] < size[0]:
-                if p.check_for_collision(self.bird,pixel_collision=False):
+                if p.check_for_collision(bird,pixel_collision=False):
                     print('Collision Detected!')
                     return True
         return False
@@ -141,7 +176,7 @@ class Controller(object):
 
     def draw_everything(self, score):
         self.draw_background()
-        self.draw_bird()
+        self.draw_birds()
         self.draw_pipe()
         self.draw_floor()
         self.draw_score(score)
@@ -151,8 +186,9 @@ class Controller(object):
         self.screen.blit(t, (round(size[0]/2), 100))
 
 
-    def draw_bird(self):
-        self.bird.draw(self.screen)
+    def draw_birds(self):
+        for b in self.birds:
+            self.b.draw(self.screen)
 
     def draw_background(self):
         self.screen.fill(bg_color)

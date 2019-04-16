@@ -5,8 +5,10 @@ from Pipe import Pipe
 from Neat_O_Player import Neat_O_Player
 size = [512, 768]
 bg_color = (22, 150, 200)
-computer_playing = False
+computer_playing = True
 play_with_pipes = True
+
+
 class Controller(object):
 
     def __init__(self):
@@ -14,14 +16,17 @@ class Controller(object):
         self.screen = pygame.display.set_mode(size)
         self.score_text = pygame.font.SysFont('Comic Sans', 32)
         self.birds = []
+        self.networks = []
         if computer_playing:
             self.computer_player = Neat_O_Player()
             for i in range(self.computer_player.num_per_gen):
-                self.birds.append(self.computer_player.get_next_bird())
+                self.birds.append(Bird())
+            self.networks = self.computer_player.increment_gen()
             self.computer_player.cur_gen = 0
             self.scores = [0]*self.computer_player.num_per_gen
         else:
             self.birds = [Bird()]
+        self.num_alive = len(self.birds)
         self.frame_score = 0
         self.floor = Floor(size[1])
         self.pipes = []
@@ -31,9 +36,9 @@ class Controller(object):
 
     def play_game(self):
 
-        collisions = [False]*len(self.birds)
         time_since_pipe = 1
         score = 0
+        collisions = [False] * len(self.birds)
 
         if not computer_playing:
             try:
@@ -43,15 +48,17 @@ class Controller(object):
                 pass
             self.data_to_write = []
         while(self.playing_game):
+
             if not computer_playing:
                 self.read_keyboard_input(self.birds[0])
             else:
-                for b in self.birds:
-                    self.read_computer_input(b)
+                for i in range(len(self.birds)):
+                    if self.birds[i].alive:
+                        self.read_computer_input(self.birds[i], self.networks[i])
 
             # NO COLLISIONS DETECTED
-            if not any(collisions):
-                for b in self.birds:
+            for b in self.birds:
+                if b.alive:
                     b.move()
                 self.draw_everything(score)
             #COLLISIONS DETECTED
@@ -60,14 +67,16 @@ class Controller(object):
                     self.playing_game = False
                 else:
                     col_count = 0
-                    #CHECK ASLL COLLISIONS
+                    #CHECK ALL COLLISIONS
                     for i in range(len(collisions)-1, -1, -1):
-                        if collisions[i]:
-                            del self.birds[i]
-                            del collisions[i]
-                            self.scores[i] = self.frame_score
+                        if self.birds[i].alive:
+                            if collisions[i]:
+                                self.birds[i].alive = False
+                                self.scores[i] = self.frame_score
+                                self.num_alive -= 1
+                                self.computer_player.network_score(self.networks[i], self.frame_score)
                     #IF NO BIRDS LEFT, RESET GAME AND CONTINUE
-                    if len(self.birds) == 0:
+                    if self.num_alive == 0:
                         self.computer_player.increment_gen()
                         if self.computer_player.cur_gen < self.computer_player.max_gen:
                             self.reset_for_new_gen()
@@ -78,7 +87,8 @@ class Controller(object):
                         self.playing_game = False
             col_count = 0
             for b in self.birds:
-                collisions[col_count] = self.check_for_collision(b)
+                if b.alive:
+                    collisions[col_count] = self.check_for_collision(b)
                 col_count += 1
             if play_with_pipes:
                 self.update_pipes()
@@ -96,12 +106,16 @@ class Controller(object):
         self.quit_game()
 
     def reset_for_new_gen(self):
+        print("resetting")
         self.birds = []
-        self.computer_player = Supervised_Player('./player_data.csv')
+        self.pipes = []
+        self.computer_player = Neat_O_Player()
         for i in range(self.computer_player.num_per_gen):
-            self.birds.append(self.computer_player.get_next_bird())
+            self.birds.append(Bird())
+        self.networks = self.computer_player.increment_gen()
         self.computer_player.cur_gen = 0
         self.scores = [0] * self.computer_player.num_per_gen
+        self.num_alive = len(self.birds)
         self.frame_score = 0
 
     def get_stimuli(self, bird):
@@ -113,8 +127,7 @@ class Controller(object):
                 next_pipe = p
                 break
         if next_pipe:
-            stimuli = [bird.top_left[0] - next_pipe.top_left[0], bird.top_left[1] - next_pipe.top_left[1]]
-        print(stimuli)
+            stimuli = [next_pipe.top_left[0] - bird.top_left[0],  next_pipe.top_left[1] - bird.top_left[1]]
         return stimuli
 
     def increment_frame_score(self):
@@ -143,22 +156,22 @@ class Controller(object):
                     self.playing_game = False
         return "NO_INPUT"
 
-    def read_computer_input(self, bird):
+    def read_computer_input(self, bird, nn):
         s = [self.get_stimuli(bird)]
-        action = self.computer_player.make_decision(s)
-        print(action)
+        action = self.computer_player.make_decision(s, nn)
         if action == "SPACE":
             bird.flap()
 
     def check_for_collision(self, bird):
+        if bird.top_left[1] < 0:
+
+            return True
         if pygame.sprite.collide_rect(bird, self.floor):
             if pygame.sprite.collide_mask(bird, self.floor):
-                print('Collision Detected!')
                 return True
         for p in self.pipes:
             if p.top_left[0] < size[0]:
                 if p.check_for_collision(bird,pixel_collision=False):
-                    print('Collision Detected!')
                     return True
         return False
 
@@ -188,7 +201,8 @@ class Controller(object):
 
     def draw_birds(self):
         for b in self.birds:
-            self.b.draw(self.screen)
+            if b.alive:
+                b.draw(self.screen)
 
     def draw_background(self):
         self.screen.fill(bg_color)

@@ -46,10 +46,8 @@ class Pipe(pygame.sprite.Sprite):
         self.mask = self.ubody_mask
         if pygame.sprite.collide_rect(bird, self):
             if pixel_collision and pygame.sprite.collide_mask(bird, self):
-                print('Collision Detected!')
                 return True
             elif not pixel_collision:
-                print('Collision Detected!')
                 return True
             self.top_left[0] = x
             self.top_left[1] = y
@@ -61,10 +59,8 @@ class Pipe(pygame.sprite.Sprite):
         self.mask = self.lbody_mask
         if pygame.sprite.collide_rect(bird, self):
             if pixel_collision and pygame.sprite.collide_mask(bird, self):
-                print('Collision Detected!')
                 return True
             elif not pixel_collision:
-                print('Collision Detected!')
                 return True
             self.top_left[0] = x
             self.top_left[1] = y
@@ -77,10 +73,8 @@ class Pipe(pygame.sprite.Sprite):
         self.mask = self.uhead_mask
         if pygame.sprite.collide_rect(bird, self):
             if pixel_collision and pygame.sprite.collide_mask(bird, self):
-                print('Collision Detected!')
                 return True
             elif not pixel_collision:
-                print('Collision Detected!')
                 return True
             self.top_left[0] = x
             self.top_left[1] = y
@@ -93,10 +87,8 @@ class Pipe(pygame.sprite.Sprite):
         self.mask = self.lhead_mask
         if pygame.sprite.collide_rect(bird, self):
             if pixel_collision and pygame.sprite.collide_mask(bird, self):
-                print('Collision Detected!')
                 return True
             elif not pixel_collision:
-                print('Collision Detected!')
                 return True
             self.top_left[0] = x
             self.top_left[1] = y

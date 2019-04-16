@@ -177,7 +177,8 @@ var Neuroevolution = function (options) {
 	Network.prototype.getSave = function () {
 		var datas = {
 			neurons: [], // Number of Neurons per layer.
-			weights: [] // Weights of each Neuron's inputs.
+			weights: elf.birds.append(Bird())
+            self.networks.append(self.computer_player.increment_gen())[] // Weights of each Neuron's inputs.
 		};
 
 		for (var i in this.layers) {

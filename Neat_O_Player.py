@@ -1,36 +1,58 @@
-import math, random
+import math, random, copy
+
+num_per_gen = 20
+elitism = 0.2
+random_behavior = 0.2
+mutation_rate = 0.1
+mutation_range = 0.5
+historic = 0
+low_historic = False
+score_sort = -1
+num_child = 1
+network_layers = [2, [1], 1]
+
 
 class Neat_O_Player(object):
 
     def __init__(self):
-        self.num_per_gen = 20
-        self.elitism = 0.2
-        self.random_behavior = 0.2
-        self.mutation_rate = 0.1
-        self.mutation_range = 0.5
-        self.historic = 0
-        self.low_historic = False
-        self.score_sort = -1
-        self.num_child = 1
+        self.num_per_gen = num_per_gen
         self.max_gen = 5
         self.cur_gen = 0
         self.cur_bird = None
-        self.network = [1, [1], 1]
+        self.generations = Generations()
 
+    def restart(self):
+        self.generations = Generations()
 
     def increment_gen(self):
         self.cur_gen+=1
         self.cur_bird = None
+        networks = []
+        if len(self.generations.generations) == 0:
+            networks = self.generations.first_generation()
+        else:
+            networks = self.generations.next_generation()
 
-    def get_next_bird(self):
-        if not self.cur_bird:
-            return self.make_first_bird()
+        nns = []
+        for i in range(len(networks)):
+            nn = Network()
+            nn.set_save(networks[i])
+            nns.append(nn)
 
-    def make_first_bird(self):
-        pass
+        if not historic == -1:
+            if len(self.generations.generations) > historic + 1:
+                self.generations.generations = self.generations.generations[0:len(self.generations.generations) - (historic+1)]
 
-    def make_decision(self, stimuli):
-        pass
+        return nns
+
+    def network_score(self, network, score):
+        self.generations.add_genome(Genome(score, network.get_save()))
+
+    def make_decision(self, stimuli, nn):
+        score = nn.compute(stimuli)
+        if score[0] > 0.5:
+            return "SPACE"
+        return "do nothing"
 
 
 class Neuron(object):
@@ -74,7 +96,7 @@ class Network(object):
             prev_neurons = h
             self.layers.append(layer)
             index += 1
-        laayer = Layer(index)
+        layer = Layer(index)
         layer.populate(output, prev_neurons)
         self.layers.append(layer)
 
@@ -94,25 +116,25 @@ class Network(object):
         index = 0
         index_weights = 0
         self.layers = []
-        for i in range(len(save.neurons)):
+        for i in range(len(save["neurons"])):
             layer = Layer(index)
-            layer.populate(save.neurons[i], prev_neurons)
+            layer.populate(save["neurons"][i], prev_neurons)
             for j in range(len(layer.neurons)):
                 for k in range(len(layer.neurons[j].weights)):
-                    layer.neurons[j].weights[k] = save.weights[index_weights]
+                    layer.neurons[j].weights[k] = save["weights"][index_weights]
                     index_weights +=1
-            prev_neurons = save.neurons[i]
+            prev_neurons = save["neurons"][i]
             index += 1
             self.layers.append(layer)
 
     def compute(self, inputs):
 
-        for i in range(len(inputs)):
+        for i in range(len(inputs[0])):
             if self.layers[0] and self.layers[0].neurons[i]:
-                self.layers[0].neurons[i].value = inputs[i]
+                self.layers[0].neurons[i].value = inputs[0][i]
 
         prev_layer = self.layers[0]
-        for i in range(len(self.layers)):
+        for i in range(1, len(self.layers)):
             for j in range(len(self.layers[i].neurons)):
                 sum = 0
                 for k in range(len(prev_layer.neurons)):
@@ -127,11 +149,107 @@ class Network(object):
 
         return out
 
+class Genome(object):
+    def __init__(self, score=0, network=None):
+        self.score = score
+        self.network = network
+
+
+class Generation(object):
+    def __init__(self):
+        self.genomes = []
+
+    def add_genome(self, genome):
+        i = 0
+        for i in range(len(self.genomes)):
+            if score_sort < 0:
+                if genome.score > self.genomes[i].score:
+                    break
+            else:
+                if genome.score < self.genomes[i].score:
+                    break
+
+        self.genomes.insert(i+1, genome)
+
+    def breed(self, g1, g2, num_children):
+        datas = []
+        for n in range(num_children):
+            data = copy.copy(g1)
+            for i in range(len(g2.network.weights)):
+                if random.random <= 0.5:
+                    data.network.weights[i] = g2.network.weights[i]
+
+            for i in range(len(data.network.weights)):
+                if random.random() < mutation_rate:
+                    data.network.weights[i] += random.random * mutation_range * 2 - mutation_range
+
+            datas.append(data)
+
+        return datas
+
+    def generate_next_generation(self):
+        nexts = []
+        for i in range(round(elitism*num_per_gen)):
+            if len(nexts) < num_per_gen:
+                nexts.append(copy.copy(self.genomes[i].network))
+
+        for i in range(round(random_behavior*num_per_gen)):
+            n = copy.copy(self.genomes[0].network)
+            for k in range(len(n.weights)):
+                n.weights[k] = random_clamped()
+            if len(nexts) < num_per_gen:
+                nexts.append(n)
+
+        maximum = 0
+        while True:
+            for i in range(maximum):
+                children = self.breed(self.genomes[i], self.genomes[maximum], num_child)
+                for c in range(len(children)):
+                    nexts.append(children[c].network)
+                    if len(nexts) >= num_per_gen:
+                        return nexts
+            maximum += 1
+            if maximum >= len(self.genomes) - 1:
+                maximum = 0
+
+class Generations(object):
+    def __init__(self):
+        self.generations = []
+        self.cur_gen = Generation()
+
+    def first_generation(self):
+        out = []
+        for i in range(num_per_gen):
+            nn = Network()
+            nn.perceptron_generation(network_layers[0], network_layers[1], network_layers[2])
+            out.append(nn.get_save())
+
+        self.generations.append(Generation())
+        return out
+
+    def next_generation(self):
+        if len(self.generations):
+            return self.first_generation()
+
+        gen = self.generations[-1].generate_next_generation()
+        self.generations.append(Generation())
+        return gen
+
+    def add_genome(self, g):
+        if len(self.generations) == 0:
+            return False
+        return self.generations[-1].add_genome(g)
+
+
 
 
 def activation(a):
     ap = (-a) / 1
-    return (1 / (1 + math.exp(ap)))
+    try:
+        return (1 / (1 + math.exp(ap)))
+    except:
+        return 1000
+
 
 
 def random_clamped():

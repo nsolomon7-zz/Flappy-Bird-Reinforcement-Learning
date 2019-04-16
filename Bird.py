@@ -15,6 +15,7 @@ class Bird(pygame.sprite.Sprite):
         self.y_velocity = .1
         self.acceleration = 3
         self.max_speed = -20
+        self.alive = True
 
     def flap(self):
         self.y_velocity = self.max_speed

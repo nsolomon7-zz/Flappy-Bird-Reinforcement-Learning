@@ -1,4 +1,4 @@
-import math, random, copy
+import math, random, copy, os
 from scipy.stats import logistic
 
 num_per_gen = 50
@@ -15,19 +15,30 @@ network_layers = [2, [1], 1]
 
 class Neat_O_Player(object):
 
+    best_ever_file = os.path.join(os.getcwd(), "best_ever.txt")
+    best_per_gen_file = os.path.join(os.getcwd(), "best_per_gen.txt")
+
     def __init__(self):
+        try:
+            os.remove(self.best_per_gen_file)
+        except:
+            pass
         self.num_per_gen = num_per_gen
-        self.max_gen = 50
+        self.max_gen = 500
         self.cur_gen = 0
         self.cur_bird = None
+        self.best_score_ever = -1
+
         self.generations = Generations()
 
     def restart(self):
         self.generations = Generations()
 
     def increment_gen(self):
+        self.save_best_score()
         self.cur_gen = self.cur_gen + 1
         self.cur_bird = None
+
         networks = []
         print("Creating Gen #%d" % self.cur_gen)
         if self.cur_gen == 1:
@@ -56,6 +67,28 @@ class Neat_O_Player(object):
         if score[0] > 0.5:
             return "SPACE"
         return "do nothing"
+
+    def save_best_score(self):
+        if len(self.generations.generations) == 0:
+            return
+        best_score_in_gen = -1
+        best_in_gen = None
+        for g in self.generations.generations[0].genomes:
+            if g.score > best_score_in_gen:
+                best_in_gen = g
+                best_score_in_gen = g.score
+
+        fhandler = open(self.best_per_gen_file, "a")
+        fhandler.writelines("Gen #%d scored %f pts: " % (self.cur_gen, best_in_gen.score) + str(best_in_gen.network) + "\n")
+        fhandler.close()
+
+        if best_score_in_gen > self.best_score_ever:
+            fhandler = open(self.best_ever_file, "w")
+            fhandler.writelines("Gen #%d scored %f pts: " % (self.cur_gen, best_in_gen.score) + str(best_in_gen.network) + "\n")
+            fhandler.close()
+            self.best_score_ever = best_score_in_gen
+
+
 
 
 class Neuron(object):

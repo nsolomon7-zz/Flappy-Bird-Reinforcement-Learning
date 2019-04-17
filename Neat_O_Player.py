@@ -1,7 +1,7 @@
 import math, random, copy
 from scipy.stats import logistic
 
-num_per_gen = 20
+num_per_gen = 50
 elitism = 0.2
 random_behavior = 0.2
 mutation_rate = 0.1
@@ -17,7 +17,7 @@ class Neat_O_Player(object):
 
     def __init__(self):
         self.num_per_gen = num_per_gen
-        self.max_gen = 5
+        self.max_gen = 50
         self.cur_gen = 0
         self.cur_bird = None
         self.generations = Generations()
@@ -29,12 +29,10 @@ class Neat_O_Player(object):
         self.cur_gen = self.cur_gen + 1
         self.cur_bird = None
         networks = []
-        print(self.cur_gen)
+        print("Creating Gen #%d" % self.cur_gen)
         if self.cur_gen == 1:
-            print("make first gen")
             networks = self.generations.first_generation()
         else:
-            print("make new gen")
             networks = self.generations.next_generation()
 
         nns = []
@@ -48,6 +46,7 @@ class Neat_O_Player(object):
                 self.generations.generations = self.generations.generations[len(self.generations.generations) - (historic+1):]
 
         return nns
+
 
     def network_score(self, network, score):
         self.generations.add_genome(Genome(score, network.get_save()))
@@ -164,28 +163,29 @@ class Generation(object):
         self.genomes = []
 
     def add_genome(self, genome):
-        i = 0
-        for i in range(len(self.genomes)):
+        count = 0
+        while count < len(self.genomes):
             if score_sort < 0:
-                if genome.score > self.genomes[i].score:
+                if genome.score > self.genomes[count].score:
                     break
             else:
-                if genome.score < self.genomes[i].score:
+                if genome.score < self.genomes[count].score:
                     break
+            count += 1
 
-        self.genomes.insert(i+1, genome)
+        self.genomes.insert(count, genome)
 
-    def breed(self, g1, g2, num_children):
+    def fuck(self, g1, g2, num_children):
         datas = []
         for n in range(num_children):
-            data = copy.copy(g1)
-            for i in range(len(g2.network.weights)):
-                if random.random <= 0.5:
-                    data.network.weights[i] = g2.network.weights[i]
+            data = copy.deepcopy(g1)
+            for i in range(len(g2.network["weights"])):
+                if random.random() <= 0.5:
+                    data.network["weights"][i] = g2.network["weights"][i]
 
-            for i in range(len(data.network.weights)):
+            for i in range(len(data.network["weights"])):
                 if random.random() < mutation_rate:
-                    data.network.weights[i] += random.random * mutation_range * 2 - mutation_range
+                    data.network["weights"][i] += random.random() * mutation_range * 2 - mutation_range
 
             datas.append(data)
 
@@ -195,19 +195,19 @@ class Generation(object):
         nexts = []
         for i in range(round(elitism*num_per_gen)):
             if len(nexts) < num_per_gen:
-                nexts.append(copy.copy(self.genomes[i].network))
+                nexts.append(copy.deepcopy(self.genomes[i].network))
 
         for i in range(round(random_behavior*num_per_gen)):
-            n = copy.copy(self.genomes[0].network)
-            for k in range(len(n.weights)):
-                n.weights[k] = random_clamped()
+            n = copy.deepcopy(self.genomes[0].network)
+            for k in range(len(n["weights"])):
+                n["weights"][k] = random_clamped()
             if len(nexts) < num_per_gen:
                 nexts.append(n)
 
         maximum = 0
         while True:
             for i in range(maximum):
-                children = self.breed(self.genomes[i], self.genomes[maximum], num_child)
+                children = self.fuck(self.genomes[i], self.genomes[maximum], num_child)
                 for c in range(len(children)):
                     nexts.append(children[c].network)
                     if len(nexts) >= num_per_gen:
@@ -232,7 +232,7 @@ class Generations(object):
         return out
 
     def next_generation(self):
-        if len(self.generations):
+        if len(self.generations) == 0:
             return self.first_generation()
 
         gen = self.generations[-1].generate_next_generation()

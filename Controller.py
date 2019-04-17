@@ -3,6 +3,7 @@ from Bird import Bird
 from Floor import Floor
 from Pipe import Pipe
 from Neat_O_Player import Neat_O_Player
+import numpy as np
 size = [512, 768]
 bg_color = (22, 150, 200)
 computer_playing = True
@@ -22,7 +23,6 @@ class Controller(object):
             for i in range(self.computer_player.num_per_gen):
                 self.birds.append(Bird())
             self.networks = self.computer_player.increment_gen()
-            self.computer_player.cur_gen = 0
             self.scores = [0]*self.computer_player.num_per_gen
         else:
             self.birds = [Bird()]
@@ -77,13 +77,14 @@ class Controller(object):
                                 self.computer_player.network_score(self.networks[i], self.frame_score)
                     #IF NO BIRDS LEFT, RESET GAME AND CONTINUE
                     if self.num_alive == 0:
-                        self.computer_player.increment_gen()
                         if self.computer_player.cur_gen < self.computer_player.max_gen:
                             self.reset_for_new_gen()
                             collisions = [False] * len(self.birds)
                             time_since_pipe = 1
                             score = 0
                             continue
+                        else:
+                            self.print_network_stats()
                         self.playing_game = False
             col_count = 0
             for b in self.birds:
@@ -106,31 +107,41 @@ class Controller(object):
         self.quit_game()
 
     def reset_for_new_gen(self):
-        print("resetting")
+        self.print_network_stats()
         self.birds = []
         self.pipes = []
         for i in range(self.computer_player.num_per_gen):
             self.birds.append(Bird())
         self.networks = self.computer_player.increment_gen()
-        self.computer_player.cur_gen = 0
         self.scores = [0] * self.computer_player.num_per_gen
         self.num_alive = len(self.birds)
         self.frame_score = 0
+        self.lay_pipe()
 
     def get_stimuli(self, bird):
         #x distance to next pipe, y distance to center of pipe
         stimuli = [999, 999]
         next_pipe = None
         for p in self.pipes:
-            if p.top_left[0] >= bird.top_left[0]:
+            if p.top_left[0] + p.pipe_width > bird.top_left[0]:
                 next_pipe = p
                 break
         if next_pipe:
-            stimuli = [next_pipe.top_left[0] - bird.top_left[0],  next_pipe.center - bird.top_left[1]]
+            stimuli = [next_pipe.top_left[0] - bird.top_left[0] + next_pipe.pipe_width,  next_pipe.center - bird.top_left[1]]
         return stimuli
 
     def increment_frame_score(self):
         self.frame_score += 1
+
+    def print_network_stats(self):
+        cur_gen = self.computer_player.cur_gen
+        scores = [g.score for g in self.computer_player.generations.generations[-1].genomes]
+        best = max(scores)
+        avg = np.mean(scores)
+        std = np.std(scores)
+        print("Generation # %d had a best score of %f, an average score of %f,"
+              "and a standard deviation of %f" % (cur_gen, best, avg, std))
+
 
     def increment_score(self, score, bird):
         for p in self.pipes:

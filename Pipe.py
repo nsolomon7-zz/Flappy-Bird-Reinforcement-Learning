@@ -39,6 +39,9 @@ class Pipe(pygame.sprite.Sprite):
         self.top_left = [width+100, 0]
 
     def check_for_collision(self, bird, pixel_collision=True):
+        def reset_top_left():
+            self.top_left[0] = x
+            self.top_left[1] = y
         x = self.top_left[0]
         y = self.top_left[1]
         self.rect = self.ubody_image.get_rect()
@@ -46,11 +49,12 @@ class Pipe(pygame.sprite.Sprite):
         self.mask = self.ubody_mask
         if pygame.sprite.collide_rect(bird, self):
             if pixel_collision and pygame.sprite.collide_mask(bird, self):
+                reset_top_left()
                 return True
             elif not pixel_collision:
+                reset_top_left()
                 return True
-            self.top_left[0] = x
-            self.top_left[1] = y
+            reset_top_left()
             return False
 
         self.top_left[1] = self.center + round(self.gap/2) + 32
@@ -59,11 +63,12 @@ class Pipe(pygame.sprite.Sprite):
         self.mask = self.lbody_mask
         if pygame.sprite.collide_rect(bird, self):
             if pixel_collision and pygame.sprite.collide_mask(bird, self):
+                reset_top_left()
                 return True
             elif not pixel_collision:
+                reset_top_left()
                 return True
-            self.top_left[0] = x
-            self.top_left[1] = y
+            reset_top_left()
             return False
 
         self.top_left[0] = x - 16
@@ -73,11 +78,12 @@ class Pipe(pygame.sprite.Sprite):
         self.mask = self.uhead_mask
         if pygame.sprite.collide_rect(bird, self):
             if pixel_collision and pygame.sprite.collide_mask(bird, self):
+                reset_top_left()
                 return True
             elif not pixel_collision:
+                reset_top_left()
                 return True
-            self.top_left[0] = x
-            self.top_left[1] = y
+            reset_top_left()
             return False
 
 
@@ -87,16 +93,18 @@ class Pipe(pygame.sprite.Sprite):
         self.mask = self.lhead_mask
         if pygame.sprite.collide_rect(bird, self):
             if pixel_collision and pygame.sprite.collide_mask(bird, self):
+                reset_top_left()
                 return True
             elif not pixel_collision:
+                reset_top_left()
                 return True
-            self.top_left[0] = x
-            self.top_left[1] = y
+            reset_top_left()
             return False
 
-        self.top_left[0] = x
-        self.top_left[1] = y
+        reset_top_left()
         return False
+
+
 
     def move(self):
         self.top_left[0] += self.x_velocity

@@ -238,16 +238,44 @@ class Generation(object):
                 nexts.append(n)
 
         maximum = 0
+        percentiles = self.calc_percentiles()
         while True:
-            for i in range(maximum):
-                children = self.fuck(self.genomes[i], self.genomes[maximum], num_child)
-                for c in range(len(children)):
-                    nexts.append(children[c].network)
-                    if len(nexts) >= num_per_gen:
-                        return nexts
-            maximum += 1
-            if maximum >= len(self.genomes) - 1:
-                maximum = 0
+            parents = self.select_parents(percentiles)
+            children = self.fuck(parents[0], parents[1], num_child)
+            for c in children:
+                nexts.append(c.network)
+                if len(nexts) >= num_per_gen:
+                    return nexts
+
+    def calc_percentiles(self):
+        tot_score = sum([g.score for g in self.genomes])
+        percentiles = []
+        tot_percentile = 0
+        for g in self.genomes:
+            perc = g.score / tot_score
+            percentiles.append(perc + tot_percentile)
+            tot_percentile += perc
+        return percentiles
+
+    def select_parents(self, percentiles):
+        p1 = None
+        p2 = None
+        p1_perc = random.random()
+        p2_perc = random.random()
+        count = 0
+        prev_perc = 0
+        for perc in percentiles:
+            if p1_perc <= perc and p1_perc > prev_perc:
+                p1 = self.genomes[count]
+            if p2_perc <= perc and p2_perc > prev_perc:
+                p2 = self.genomes[count]
+            if p1 and p2:
+                return [p1, p2]
+            prev_perc = perc
+            count += 1
+
+
+
 
 class Generations(object):
     def __init__(self):

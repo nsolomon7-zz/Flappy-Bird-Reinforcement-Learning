@@ -48,7 +48,6 @@ class Controller(object):
                 pass
             self.data_to_write = []
         while(self.playing_game):
-
             if not computer_playing:
                 self.read_keyboard_input(self.birds[0])
             else:
@@ -56,36 +55,37 @@ class Controller(object):
                     if self.birds[i].alive:
                         self.read_computer_input(self.birds[i], self.networks[i])
 
-            # NO COLLISIONS DETECTED
+            count = 0
             for b in self.birds:
-                if b.alive:
+                if b.alive and not collisions[count]:
                     b.move()
-                self.draw_everything(score)
+                count += 1
+            self.draw_everything(score)
+
             #COLLISIONS DETECTED
+            if not computer_playing and any(collisions):
+                self.playing_game = False
             else:
-                if not computer_playing:
+                col_count = 0
+                #CHECK ALL COLLISIONS
+                for i in range(len(collisions)-1, -1, -1):
+                    if self.birds[i].alive:
+                        if collisions[i]:
+                            self.birds[i].alive = False
+                            self.scores[i] = self.frame_score
+                            self.num_alive -= 1
+                            self.computer_player.network_score(self.networks[i], self.frame_score)
+                #IF NO BIRDS LEFT, RESET GAME AND CONTINUE
+                if self.num_alive == 0:
+                    if self.computer_player.cur_gen < self.computer_player.max_gen:
+                        self.reset_for_new_gen()
+                        collisions = [False] * len(self.birds)
+                        time_since_pipe = 1
+                        score = 0
+                        continue
+                    else:
+                        self.print_network_stats()
                     self.playing_game = False
-                else:
-                    col_count = 0
-                    #CHECK ALL COLLISIONS
-                    for i in range(len(collisions)-1, -1, -1):
-                        if self.birds[i].alive:
-                            if collisions[i]:
-                                self.birds[i].alive = False
-                                self.scores[i] = self.frame_score
-                                self.num_alive -= 1
-                                self.computer_player.network_score(self.networks[i], self.frame_score)
-                    #IF NO BIRDS LEFT, RESET GAME AND CONTINUE
-                    if self.num_alive == 0:
-                        if self.computer_player.cur_gen < self.computer_player.max_gen:
-                            self.reset_for_new_gen()
-                            collisions = [False] * len(self.birds)
-                            time_since_pipe = 1
-                            score = 0
-                            continue
-                        else:
-                            self.print_network_stats()
-                        self.playing_game = False
             col_count = 0
             for b in self.birds:
                 if b.alive:

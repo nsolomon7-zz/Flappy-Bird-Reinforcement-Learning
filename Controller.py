@@ -133,12 +133,18 @@ class Controller(object):
     def increment_frame_score(self):
         self.frame_score += 1
 
-    def print_network_stats(self):
+    def get_network_stats(self):
         cur_gen = self.computer_player.cur_gen
+        if len(self.computer_player.generations.generations[0].genomes) == 0:
+            return 1, 0, 0, 0
         scores = [g.score for g in self.computer_player.generations.generations[-1].genomes]
         best = max(scores)
         avg = np.mean(scores)
         std = np.std(scores)
+        return cur_gen, best, avg, std
+
+    def print_network_stats(self):
+        cur_gen, best, avg, std = self.get_network_stats()
         print("Generation # %d had a best score of %f, an average score of %f,"
               "and a standard deviation of %f" % (cur_gen, best, avg, std))
 
@@ -203,6 +209,26 @@ class Controller(object):
         self.draw_pipe()
         self.draw_floor()
         self.draw_score(score)
+        if computer_playing:
+            self.draw_computer_info()
+
+    def draw_computer_info(self):
+        cur_gen, best, avg, std = self.get_network_stats()
+        num_alive = len([b for b in self.birds if b.alive])
+        num_per_gen = self.computer_player.num_per_gen
+        best_ever = self.computer_player.best_score_ever
+        if self.frame_score > best_ever:
+            best_ever = self.frame_score
+        s = self.score_text.render("Frame Score: %d" % self.frame_score, False, (255, 255, 255))
+        na = self.score_text.render("Alive: %d / %d" % (num_alive, num_per_gen), False, (255, 255, 255))
+        g = self.score_text.render("Generation: %d" % cur_gen, False, (255, 255, 255))
+        b = self.score_text.render("Best Score: %d" % best_ever, False, (255, 255, 255))
+
+        self.screen.blit(g, (5, 5))
+        self.screen.blit(na, (5, 25))
+        self.screen.blit(s, (5, 45))
+        self.screen.blit(b, (5, 65))
+
 
     def draw_score(self, score):
         t = self.score_text.render("%s" % score, False, (255, 255, 255))

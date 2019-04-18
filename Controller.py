@@ -132,6 +132,8 @@ class Controller(object):
 
     def increment_frame_score(self):
         self.frame_score += 1
+        if self.frame_score == 20000:
+        	self.computer_player.save_best_score()
 
     def get_network_stats(self):
         cur_gen = self.computer_player.cur_gen

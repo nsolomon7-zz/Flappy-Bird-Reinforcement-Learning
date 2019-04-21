@@ -7,8 +7,13 @@ import numpy as np
 size = [512, 768]
 bg_color = (22, 150, 200)
 computer_playing = True
+
+bad_stimuli = True
 play_with_pipes = True
 
+fr = 30
+if computer_playing:
+    fr = 120
 
 class Controller(object):
 
@@ -98,7 +103,7 @@ class Controller(object):
                 self.lay_pipe()
             pygame.display.update()
             pygame.event.pump()
-            pygame.time.Clock().tick(30)
+            pygame.time.Clock().tick(fr)
             time_since_pipe += 1
             score = self.increment_score(score, self.birds[0])
             self.increment_frame_score()
@@ -120,7 +125,9 @@ class Controller(object):
 
     def get_stimuli(self, bird):
         #x distance to next pipe, y distance to center of pipe
-        stimuli = [999, 999]
+        stimuli = [999,999]
+        if bad_stimuli:
+            stimuli = [999, 999, 999, 999, 999]
         next_pipe = None
         for p in self.pipes:
             if p.top_left[0] + p.pipe_width > bird.top_left[0]:
@@ -128,6 +135,8 @@ class Controller(object):
                 break
         if next_pipe:
             stimuli = [next_pipe.top_left[0] - bird.top_left[0] + next_pipe.pipe_width,  next_pipe.center - bird.top_left[1]]
+            if bad_stimuli:
+                stimuli.extend([bird.y_velocity,bird.acceleration,next_pipe.center])
         return stimuli
 
     def increment_frame_score(self):

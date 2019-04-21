@@ -7,9 +7,13 @@ from itertools import cycle
 from pygame.locals import *
 size = [512, 768]
 bg_color = (22, 150, 200)
+bad_stimuli = True
 computer_playing = True
 play_with_pipes = True
 GENERATION = 0
+fr = 30
+if computer_playing:
+    fr = 120
 class Controller(object):
 
     def __init__(self, genomes, config, gen):
@@ -101,7 +105,7 @@ class Controller(object):
                 self.lay_pipe()
             pygame.display.update()
             pygame.event.pump()
-            pygame.time.Clock().tick(30)
+            pygame.time.Clock().tick(fr)
             time_since_pipe += 1
             score = self.increment_score(score, self.birds[0])
             self.increment_frame_score()
@@ -124,13 +128,18 @@ class Controller(object):
     def get_stimuli(self, bird):
         #x distance to next pipe, y distance to center of pipe
         stimuli = [999, 999]
+        if bad_stimuli:
+            stimuli = [999, 999, 999, 999, 999]
         next_pipe = None
         for p in self.pipes:
             if p.top_left[0] + p.pipe_width > bird.top_left[0]:
                 next_pipe = p
                 break
         if next_pipe:
-            stimuli = [next_pipe.top_left[0] - bird.top_left[0] + next_pipe.pipe_width,  next_pipe.center - bird.top_left[1]]
+            stimuli = [next_pipe.top_left[0] - bird.top_left[0] + next_pipe.pipe_width,
+                       next_pipe.center - bird.top_left[1]]
+            if bad_stimuli:
+                stimuli.extend([bird.y_velocity, bird.acceleration, next_pipe.center])
         return stimuli
 
     def increment_frame_score(self):
@@ -179,7 +188,7 @@ class Controller(object):
 
     def read_computer_input(self, bird, nn):
         s = self.get_stimuli(bird)
-        input = (s[0],s[1])
+        input = s
         out = nn.activate(input)
         if out[0] >= .5:
             action = 'SPACE'

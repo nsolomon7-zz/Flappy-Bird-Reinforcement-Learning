@@ -9,7 +9,6 @@ size = [512, 768]
 bg_color = (22, 150, 200)
 computer_playing = True
 play_with_pipes = True
-individuals = 50
 GENERATION = 0
 class Controller(object):
 
@@ -24,10 +23,10 @@ class Controller(object):
             for g_id, genome in genomes:
                 self.birds.append(Bird())
                 net = neat.nn.FeedForwardNetwork.create(genome,config)
-                print(net.node_evals)
+                print(genome)
                 self.computer_player.append(net)
             #self.networks = self.computer_player.increment_gen()
-            self.scores = [0]*individuals
+            self.scores = [0]*len(self.computer_player)
         else:
             self.birds = [Bird()]
         self.num_alive = len(self.birds)
@@ -36,7 +35,6 @@ class Controller(object):
         self.pipes = []
         self.lay_pipe()
         self.playing_game = True
-        self.play_game()
 
     def play_game(self):
 
@@ -90,6 +88,7 @@ class Controller(object):
                     # else:
                     #     self.print_network_stats()
                     self.playing_game = False
+                    return self.scores
             col_count = 0
             for b in self.birds:
                 if b.alive:
@@ -231,7 +230,7 @@ class Controller(object):
     #     if self.frame_score > best_ever:
     #         best_ever = self.frame_score
          s = self.score_text.render("Frame Score: %d" % self.frame_score, False, (255, 255, 255))
-         na = self.score_text.render("Alive: %d / %d" % (num_alive, individuals), False, (255, 255, 255))
+         na = self.score_text.render("Alive: %d / %d" % (num_alive, len(self.computer_player)), False, (255, 255, 255))
          g = self.score_text.render("Generation: %d" % self.gen, False, (255, 255, 255))
     #     b = self.score_text.render("Best Score: %d" % best_ever, False, (255, 255, 255))
 
@@ -269,7 +268,13 @@ def eval_genomes(genomes, config):
 
     GENERATION += 1
     #for genome_id, genome in genomes:
-    Controller(genomes, config, GENERATION)
+    c = Controller(genomes, config, GENERATION)
+    scores = c.play_game()
+    i = 0
+    print(scores)
+    for g_id, g in genomes:
+        g.fitness = scores[i]
+        i += 1
         
 
 

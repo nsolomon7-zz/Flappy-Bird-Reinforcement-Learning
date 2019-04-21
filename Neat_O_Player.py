@@ -1,7 +1,7 @@
 import math, random, copy, os
 from scipy.stats import logistic
 
-num_per_gen = 50
+num_per_gen = 10
 elitism = 0.2
 random_behavior = 0.2
 mutation_rate = 0.1
@@ -10,7 +10,7 @@ historic = 0
 low_historic = False
 score_sort = -1
 num_child = 1
-network_layers = [2, [1], 1]
+network_layers = [2, [], 1]
 
 
 class Neat_O_Player(object):

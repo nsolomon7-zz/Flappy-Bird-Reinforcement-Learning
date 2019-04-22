@@ -7,14 +7,17 @@ from itertools import cycle
 from pygame.locals import *
 size = [512, 768]
 bg_color = (22, 150, 200)
-bad_stimuli = True
+bad_stimuli = False
 computer_playing = True
 play_with_pipes = True
+gen_size = 30
 GENERATION = 0
 fr = 30
 if computer_playing:
-    fr = 120
+    fr = 9999
 class Controller(object):
+
+
 
     def __init__(self, genomes, config, gen):
         pygame.init()
@@ -23,12 +26,13 @@ class Controller(object):
         self.birds = []
         self.computer_player = []
         self.gen = gen
+        self.genomes = []
         if computer_playing:           
             for g_id, genome in genomes:
                 self.birds.append(Bird())
                 net = neat.nn.FeedForwardNetwork.create(genome,config)
-                print(genome)
                 self.computer_player.append(net)
+                self.genomes.append(genome)
             #self.networks = self.computer_player.increment_gen()
             self.scores = [0]*len(self.computer_player)
         else:
@@ -80,18 +84,9 @@ class Controller(object):
                             self.birds[i].alive = False
                             self.scores[i] = self.frame_score
                             self.num_alive -= 1
-                            #self.computer_player.network_score(self.computer_player[i], self.frame_score)
-                #IF NO BIRDS LEFT, RESET GAME AND CONTINUE
                 if self.num_alive == 0:
-                    # if self.computer_player.cur_gen < self.computer_player.max_gen:
-                    #     self.reset_for_new_gen()
-                    #     collisions = [False] * len(self.birds)
-                    #     time_since_pipe = 1
-                    #     score = 0
-                    #     continue
-                    # else:
-                    #     self.print_network_stats()
                     self.playing_game = False
+                    self.save_best_score()
                     return self.scores
             col_count = 0
             for b in self.birds:
@@ -113,21 +108,9 @@ class Controller(object):
         self.display_score()
         self.quit_game()
 
-    # def reset_for_new_gen(self):
-    #     self.print_network_stats()
-    #     self.birds = []
-    #     self.pipes = []
-    #     for i in range(self.computer_player.num_per_gen):
-    #         self.birds.append(Bird())
-    #     self.networks = self.computer_player.increment_gen()
-    #     self.scores = [0] * self.computer_player.num_per_gen
-    #     self.num_alive = len(self.birds)
-    #     self.frame_score = 0
-    #     self.lay_pipe()
-
     def get_stimuli(self, bird):
         #x distance to next pipe, y distance to center of pipe
-        stimuli = [999, 999]
+        stimuli = [999]
         if bad_stimuli:
             stimuli = [999, 999, 999, 999, 999]
         next_pipe = None
@@ -136,32 +119,47 @@ class Controller(object):
                 next_pipe = p
                 break
         if next_pipe:
-            stimuli = [next_pipe.top_left[0] - bird.top_left[0] + next_pipe.pipe_width,
-                       next_pipe.center - bird.top_left[1]]
+            stimuli = [next_pipe.center - bird.top_left[1]]
             if bad_stimuli:
-                stimuli.extend([bird.y_velocity, bird.acceleration, next_pipe.center])
+                stimuli.extend([next_pipe.top_left[0] - bird.top_left[0] + next_pipe.pipe_width, bird.y_velocity, bird.acceleration, next_pipe.center])
         return stimuli
 
     def increment_frame_score(self):
         self.frame_score += 1
-        # if self.frame_score == 20000:
-        # 	self.computer_player.save_best_score()
+        if self.frame_score == 700:
+            c = 0
+            for b in self.birds:
+                if b.alive:
+                    break
+                c+=1
+            self.save_best_score(self.frame_score, self.genomes[c])
 
-    # def get_network_stats(self):
-    #     cur_gen = self.computer_player.cur_gen
-    #     if len(self.computer_player.generations.generations[0].genomes) == 0:
-    #         return 1, 0, 0, 0
-    #     scores = [g.score for g in self.computer_player.generations.generations[-1].genomes]
-    #     best = max(scores)
-    #     avg = np.mean(scores)
-    #     std = np.std(scores)
-    #     return cur_gen, best, avg, std
+    def save_best_score(self, frame_score = None, net = None):
+        global best_score_ever, best_per_gen_file, best_ever_file
+        best_score_in_gen = -1
+        best_in_gen = None
+        c = 0
+        if not frame_score:
+            for s in self.scores:
+                if s > best_score_in_gen:
+                    best_in_gen = self.genomes[c]
+                    best_score_in_gen = s
+                c = c + 1
+        else:
+            best_score_in_gen = frame_score
+            best_in_gen = net
 
-    # def print_network_stats(self):
-    #     cur_gen, best, avg, std = self.get_network_stats()
-    #     print("Generation # %d had a best score of %f, an average score of %f,"
-    #           "and a standard deviation of %f" % (cur_gen, best, avg, std))
+        best_in_gen = str(best_in_gen).replace('\n', '').replace('\r', '')
+        fhandler = open(best_per_gen_file, "a")
+        fhandler.writelines("Gen #%d scored %f pts: " % (GENERATION, best_score_in_gen) + str(
+            best_in_gen) + "\n")
+        fhandler.close()
 
+        if best_score_in_gen > best_score_ever:
+            fhandler = open(best_ever_file, "w")
+            fhandler.writelines("Gen #%d scored %f pts: " % (GENERATION, best_score_in_gen) + str(best_in_gen) + "\n")
+            fhandler.close()
+            best_score_ever = best_score_in_gen
 
     def increment_score(self, score, bird):
         for p in self.pipes:
@@ -239,7 +237,7 @@ class Controller(object):
     #     if self.frame_score > best_ever:
     #         best_ever = self.frame_score
          s = self.score_text.render("Frame Score: %d" % self.frame_score, False, (255, 255, 255))
-         na = self.score_text.render("Alive: %d / %d" % (num_alive, len(self.computer_player)), False, (255, 255, 255))
+         na = self.score_text.render("Alive: %d / %d" % (num_alive, gen_size), False, (255, 255, 255))
          g = self.score_text.render("Generation: %d" % self.gen, False, (255, 255, 255))
     #     b = self.score_text.render("Best Score: %d" % best_ever, False, (255, 255, 255))
 
@@ -288,6 +286,16 @@ def eval_genomes(genomes, config):
 
 
 if __name__ == "__main__":
+    global best_score_ever
+    global best_ever_file
+    best_ever_file = os.path.join(os.getcwd(), "best_ever_NEAT.txt")
+    global best_per_gen_file
+    best_per_gen_file = os.path.join(os.getcwd(), "best_per_gen_NEAT.txt")
+    if os.path.isfile(best_ever_file):
+        os.remove(best_ever_file)
+    if os.path.isfile(best_per_gen_file):
+        os.remove(best_per_gen_file)
+    best_score_ever = -1
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          'config')

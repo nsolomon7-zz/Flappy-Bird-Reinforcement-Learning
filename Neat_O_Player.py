@@ -10,15 +10,19 @@ historic = 0
 low_historic = False
 score_sort = -1
 num_child = 1
-network_layers = [5, [], 1]
+network_layers = [1, [], 1]
 
 
 class Neat_O_Player(object):
 
-    best_ever_file = os.path.join(os.getcwd(), "best_ever.txt")
-    best_per_gen_file = os.path.join(os.getcwd(), "best_per_gen.txt")
+    best_ever_file = os.path.join(os.getcwd(), "best_ever_neuroevolution.txt")
+    best_per_gen_file = os.path.join(os.getcwd(), "best_per_gen_neuroevolution.txt")
 
     def __init__(self):
+        if os.path.isfile(self.best_ever_file):
+            os.remove(self.best_ever_file)
+        if os.path.isfile(self.best_per_gen_file):
+            os.remove(self.best_per_gen_file)
         try:
             os.remove(self.best_per_gen_file)
         except:
@@ -68,15 +72,19 @@ class Neat_O_Player(object):
             return "SPACE"
         return "do nothing"
 
-    def save_best_score(self):
+    def save_best_score(self, frame_score = None, count = None):
         if len(self.generations.generations) == 0:
             return
         best_score_in_gen = -1
         best_in_gen = None
-        for g in self.generations.generations[0].genomes:
-            if g.score > best_score_in_gen:
-                best_in_gen = g
-                best_score_in_gen = g.score
+        if not frame_score:
+            for g in self.generations.generations[0].genomes:
+                if g.score > best_score_in_gen:
+                    best_in_gen = g
+                    best_score_in_gen = g.score
+        else:
+            best_in_gen = self.generations.generations[0].genomes[count]
+            best_score_in_gen = frame_score
 
         fhandler = open(self.best_per_gen_file, "a")
         fhandler.writelines("Gen #%d scored %f pts: " % (self.cur_gen, best_in_gen.score) + str(best_in_gen.network) + "\n")

@@ -1,0 +1,8 @@
+Gen #1 scored 63.000000 pts: {'neurons': [1, 1], 'weights': [-0.9220346081415904]}
+Gen #2 scored 195.000000 pts: {'neurons': [1, 1], 'weights': [-0.9220346081415904]}
+Gen #3 scored 425.000000 pts: {'neurons': [1, 1], 'weights': [-0.9671020433832189]}
+Gen #4 scored 6.000000 pts: {'neurons': [1, 1], 'weights': [0.21025343454487122]}
+Gen #4 scored 744.000000 pts: {'neurons': [1, 1], 'weights': [-0.9220346081415904]}
+Gen #5 scored 130.000000 pts: {'neurons': [1, 1], 'weights': [-1.1334172386169468]}
+Gen #6 scored 303.000000 pts: {'neurons': [1, 1], 'weights': [-0.9475437589501321]}
+Gen #7 scored 6.000000 pts: {'neurons': [1, 1], 'weights': [0.19026391232640738]}

@@ -8,7 +8,7 @@ size = [512, 768]
 bg_color = (22, 150, 200)
 computer_playing = True
 
-bad_stimuli = True
+bad_stimuli = False
 play_with_pipes = True
 
 fr = 30
@@ -125,7 +125,7 @@ class Controller(object):
 
     def get_stimuli(self, bird):
         #x distance to next pipe, y distance to center of pipe
-        stimuli = [999,999]
+        stimuli = [999]
         if bad_stimuli:
             stimuli = [999, 999, 999, 999, 999]
         next_pipe = None
@@ -134,15 +134,20 @@ class Controller(object):
                 next_pipe = p
                 break
         if next_pipe:
-            stimuli = [next_pipe.top_left[0] - bird.top_left[0] + next_pipe.pipe_width,  next_pipe.center - bird.top_left[1]]
+            stimuli = [next_pipe.center - bird.top_left[1]]
             if bad_stimuli:
-                stimuli.extend([bird.y_velocity,bird.acceleration,next_pipe.center])
+                stimuli.extend([next_pipe.top_left[0] - bird.top_left[0] + next_pipe.pipe_width,bird.y_velocity,bird.acceleration,next_pipe.center])
         return stimuli
 
     def increment_frame_score(self):
         self.frame_score += 1
-        if self.frame_score == 20000:
-        	self.computer_player.save_best_score()
+        if self.frame_score == 700:
+            c = 0
+            for b in self.birds:
+                if b.alive:
+                    break
+                c = c+1
+            self.computer_player.save_best_score(self.frame_score, c)
 
     def get_network_stats(self):
         cur_gen = self.computer_player.cur_gen
